@@ -1,0 +1,10 @@
+version: "3"
+
+services:
+  telegram-python-bot:
+    build: .
+    image: telegram-python-bot
+    container_name: telegram-python-bot
+    env_file:
+      - .env
+    restart: unless-stopped
