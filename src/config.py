@@ -1,0 +1,4 @@
+
+login_url = "https://fqgpcifsfmamprzldyiv.supabase.co/auth/v1/token?grant_type=password"
+apikey="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZxZ3BjaWZzZm1hbXByemxkeWl2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY4MzgzMTYyMywiZXhwIjoxOTk5NDA3NjIzfQ.hXu39IzKa1vm5IWyT9zjx3axqmdc7n1zPmcUPcS7syk"
+quivr_api_url="https://api.quivr.app"

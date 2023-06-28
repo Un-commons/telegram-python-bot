@@ -156,6 +156,9 @@ async def poll(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def receive_poll_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Summarize a users poll vote"""
+    # if update.poll.is_closed:
+    #     return
+
     answer = update.poll_answer
     poll_answer_id = answer.poll_id
     logger.info(f"Receive Poll Answer: {answer} From {answer.user.id }")
@@ -192,6 +195,11 @@ async def receive_poll(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     """On receiving polls, reply to it by a closed poll copying the received poll"""
     username = update.effective_user.username
     print("receive_poll user: ",username)
+    answer = update.poll_answer
+    poll_answer_id = answer.poll_id
+    only_members = context.bot_data[poll_answer_id]["only_members"]
+    poll_id = context.bot_data[poll_answer_id]["poll_id"]
+    print("receive_poll only_members", only_members)
     actual_poll = update.effective_message.poll
     # Only need to set the question and options, since all other parameters don't matter for
     # a closed poll
@@ -199,9 +207,52 @@ async def receive_poll(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         question=actual_poll.question,
         options=[o.text for o in actual_poll.options],
         # with is_closed true, the poll/quiz is immediately closed
-        is_closed=False,
+        is_closed=True,
         reply_markup=ReplyKeyboardRemove(),
     )
+
+def ask_question(question,type=None):
+    from src.config import login_url,apikey,quivr_api_url
+    login_email: str = os.getenv("quivr_login_email")
+    login_password: str = os.getenv("quivr_login_password")
+
+    from src.quivr_script import get_token,quivr_question,quivr_tg_question,quivr_chat
+    token = get_token(login_url, login_email, login_password, apikey)
+    # if type == "new":
+    #     chat_id = quivr_chat(quivr_api_url, question=question, token=token)
+    #     assistant_text = quivr_question(quivr_api_url, chat_id=chat_id, question=question, token=token)
+    # else:
+    #     assistant_text = quivr_tg_question(quivr_api_url, question=question, token=token)
+    chat_id = quivr_chat(quivr_api_url, question=question, token=token)
+    logger.info(f"ChatID: {chat_id}")
+
+    assistant_text = quivr_question(quivr_api_url, chat_id=chat_id, question=question, token=token)
+    return assistant_text
+
+
+async def chat(update: Update, context):
+    question = update.message.text.split(' ', 1)[1]  # split the message into command and question, and get the question part
+    question = question.strip().replace('\n', '')
+    logger.info(f"question: {question}")
+    answer = ask_question(question=question)
+    await update.message.reply_text(answer)
+
+async def newchat(update: Update, context):
+    question = update.message.text.split(' ', 1)[1]  # split the message into command and question, and get the question part
+    answer = ask_question(question,type="new")
+    await update.message.reply_text(answer)
+
+async def crawl(update: Update, context):
+    url = update.message.text.split(' ', 1)[1]  # split the message into command and question, and get the question part
+    from src.quivr_script import get_token, crawl_url
+    from src.config import login_url, apikey, quivr_api_url
+    login_email: str = os.getenv("quivr_login_email")
+    login_password: str = os.getenv("quivr_login_password")
+    logger.info(f"Get Input:{url}")
+    token = get_token(login_url, login_email, login_password, apikey)
+    response = crawl_url(quivr_api_url, url, token)
+    logger.info(f"crawl_url_response:{response}")
+    await update.message.reply_text(response)
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Display a help message"""
@@ -221,6 +272,9 @@ def run_telegram_bot():
     application.add_handler(MessageHandler(filters.POLL, receive_poll))
     application.add_handler(PollAnswerHandler(receive_poll_answer))
     # application.add_handler(PollHandler(receive_poll_answer))
+    application.add_handler(CommandHandler("chat", chat))
+    application.add_handler(CommandHandler("newchat", newchat))
+    application.add_handler(CommandHandler("crawl", crawl))
 
     # Run the bot until the user presses Ctrl-C
     application.run_polling(allowed_updates=Update.ALL_TYPES)
